@@ -1,64 +1,66 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QHBoxLayout, QToolBar, QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QToolBar, QPushButton, QWidget, QHBoxLayout
 from PySide6.QtCore import Qt
 
 from pages.home_page import HomePage
-from pages.stats_page import StatsPage
-from pages.chart_page import ChartPage
+from pages.stats_page import StatsPage  # If still needed; otherwise, remove
+from pages.graphs_page import GraphsPage
+from pages.table_page import TablePage
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Statistical Analysis App")
-        self.df = None  # Shared DataFrame across pages
+        self.setWindowTitle("Minimalistic Data Analytics App")
+        self.resize(1200, 800)
+        self.df = None  # Shared DataFrame
 
-        # Create a stacked widget to hold our pages
-        self.stacked_widget = QStackedWidget()
-        self.setCentralWidget(self.stacked_widget)
-        
-        # Instantiate pages and add them to the stacked widget
-        self.home_page = HomePage(self)
-        self.stats_page = StatsPage(self)
-        self.chart_page = ChartPage(self)
-        self.stacked_widget.addWidget(self.home_page)   # index 0
-        self.stacked_widget.addWidget(self.stats_page)    # index 1
-        self.stacked_widget.addWidget(self.chart_page)    # index 2
+        # Create a stacked widget and pages
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
 
-        # Navigation toolbar at the bottom
-        nav_widget = QWidget()
-        nav_layout = QHBoxLayout()
-        nav_layout.setSpacing(20)
-        btn_home = QPushButton("Home")
-        btn_home.clicked.connect(lambda: self.change_page(0))
-        nav_layout.addWidget(btn_home)
-        btn_stats = QPushButton("Statistics")
-        btn_stats.clicked.connect(lambda: self.change_page(1))
-        nav_layout.addWidget(btn_stats)
-        btn_charts = QPushButton("Charts")
-        btn_charts.clicked.connect(self.go_to_chart)
-        nav_layout.addWidget(btn_charts)
-        nav_widget.setLayout(nav_layout)
+        self.home_page = HomePage(self)  # Home page with file browsing etc.
+        self.stats_page = StatsPage(self)  # Statistics page; optional if you prefer
+        self.graphs_page = GraphsPage(self)  # Graphs page using Qt Charts
+        self.table_page = TablePage(self)    # New Table page showing data
 
-        self.addToolBar(Qt.BottomToolBarArea, self.create_toolbar(nav_widget))
+        self.stack.addWidget(self.home_page)   # index 0
+        self.stack.addWidget(self.stats_page)    # index 1
+        self.stack.addWidget(self.graphs_page)   # index 2
+        self.stack.addWidget(self.table_page)    # index 3
 
-    def create_toolbar(self, widget):
+        self.create_toolbar()
+
+    def create_toolbar(self):
         toolbar = QToolBar()
-        toolbar.addWidget(widget)
-        return toolbar
-
-    def change_page(self, index):
-        self.stacked_widget.setCurrentIndex(index)
-        # When switching to the chart page, update column choices
-        if index == 2:
-            self.chart_page.update_columns()
-
-    def go_to_chart(self):
-        self.chart_page.update_columns()
-        self.change_page(2)
+        toolbar.setMovable(False)
+        toolbar.setStyleSheet("""
+            QToolBar { background-color: #000000; border: none; }
+            QPushButton { background-color: #000000; color: #00FF00; border: none; padding: 8px 12px; }
+            QPushButton:hover { background-color: #005500; }
+        """)
+        
+        home_btn = QPushButton("Home")
+        home_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.home_page))
+        stats_btn = QPushButton("Statistics")
+        stats_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.stats_page))
+        graphs_btn = QPushButton("Graphs")
+        graphs_btn.clicked.connect(lambda: self.graphs_page.update_columns() or self.stack.setCurrentWidget(self.graphs_page))
+        table_btn = QPushButton("Table")
+        table_btn.clicked.connect(lambda: self.table_page.update_table() or self.stack.setCurrentWidget(self.table_page))
+        
+        layout = QHBoxLayout()
+        layout.setSpacing(20)
+        layout.addWidget(home_btn)
+        layout.addWidget(stats_btn)
+        layout.addWidget(graphs_btn)
+        layout.addWidget(table_btn)
+        container = QWidget()
+        container.setLayout(layout)
+        toolbar.addWidget(container)
+        self.addToolBar(Qt.TopToolBarArea, toolbar)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.resize(800, 600)
     window.show()
     sys.exit(app.exec())
